@@ -28,6 +28,11 @@ constexpr uint32_t baudrate = 460800;
 constexpr int kMotorsPerHand = 6;
 constexpr int kTotalMotors = 12;
 
+// DDS uses Inspire finger order: [pinky, ring, middle, index, thumb, thumb_rot]
+// BrainCo hardware uses:         [thumb, thumb_aux, index, middle, ring, pinky]
+// This maps DDS slot index → BrainCo hardware index
+constexpr int kDdsToHw[kMotorsPerHand] = {5, 4, 3, 2, 0, 1};
+
 // Shared DDS resources for the combined ee topic
 struct SharedDDS {
     std::shared_ptr<unitree::robot::SubscriptionBase<unitree_go::msg::dds_::MotorCmds_>> cmd_sub;
@@ -106,12 +111,13 @@ void update_finger(DeviceHandler* handle, uint8_t slave_id,
     uint16_t positions[6], speeds[6];
 
     // Read commands from combined topic at this hand's offset
+    // Remap: DDS uses Inspire order, hardware uses BrainCo order
     // Invert: adapter convention 1.0=open → hardware 0=open (multiply inverted by 1000)
     for (int i = 0; i < kMotorsPerHand; ++i) {
         float cmd_val = std::clamp(shared->cmd_sub->msg_.cmds()[offset + i].q(), 0.f, 1.f);
-        positions[i] = static_cast<uint16_t>((1.0f - cmd_val) * 1000.f);
+        positions[kDdsToHw[i]] = static_cast<uint16_t>((1.0f - cmd_val) * 1000.f);
         float spd_val = std::clamp(shared->cmd_sub->msg_.cmds()[offset + i].dq(), 0.f, 1.f);
-        speeds[i]    = static_cast<uint16_t>(spd_val * 1000.f);
+        speeds[kDdsToHw[i]]    = static_cast<uint16_t>(spd_val * 1000.f);
     }
 
     // Write commands to hardware
@@ -122,12 +128,13 @@ void update_finger(DeviceHandler* handle, uint8_t slave_id,
     if (!status) return;
 
     // Update combined state at this hand's offset
+    // Remap: hardware BrainCo order → DDS Inspire order
     // Invert: hardware 0=open → adapter convention 1.0=open
     if (shared->state_pub->trylock()) {
         for (int i = 0; i < kMotorsPerHand; ++i) {
-            shared->state_pub->msg_.states()[offset + i].q()       = 1.0f - (status->positions[i] / 1000.f);
-            shared->state_pub->msg_.states()[offset + i].dq()      = status->speeds[i] / 1000.f;
-            shared->state_pub->msg_.states()[offset + i].tau_est() = status->currents[i] / 1000.f;
+            shared->state_pub->msg_.states()[offset + i].q()       = 1.0f - (status->positions[kDdsToHw[i]] / 1000.f);
+            shared->state_pub->msg_.states()[offset + i].dq()      = status->speeds[kDdsToHw[i]] / 1000.f;
+            shared->state_pub->msg_.states()[offset + i].tau_est() = status->currents[kDdsToHw[i]] / 1000.f;
         }
         shared->state_pub->unlockAndPublish();
     }

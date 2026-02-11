@@ -21,8 +21,12 @@ if(POLICY CMP0167)
   cmake_policy(SET CMP0167 NEW)
 endif()
 
+list(APPEND CMAKE_PREFIX_PATH "/opt/weston_robot/lib/cmake")
+
 find_package(Boost REQUIRED COMPONENTS program_options)
 find_package(yaml-cpp REQUIRED)
+find_package(unitree_sdk2 REQUIRED)
+find_package(fmt REQUIRED)
 
 
 include_directories(
