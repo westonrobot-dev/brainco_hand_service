@@ -23,7 +23,8 @@ namespace param
         desc.add_options()
             ("help,h", "produce help message")
             ("version,v", "show version")
-            ("network_interface,n", po::value<std::string>()->default_value(""), "dds network interface");
+            ("network_interface,n", po::value<std::string>()->default_value(""), "dds network interface")
+            ("namespace", po::value<std::string>()->default_value("ee"), "DDS topic namespace");
 
         po::variables_map vm;
         po::store(po::parse_command_line(argc, argv, desc), vm);

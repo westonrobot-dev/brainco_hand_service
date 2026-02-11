@@ -24,9 +24,9 @@ The dexterous hand is controlled via serial communication, and the manufacturer 
 
 In this repository, we convert serial messages into DDS messages so they can be used with [unitree_sdk2](https://github.com/unitreerobotics/unitree_sdk2) or [unitree_sdk2_python](https://github.com/unitreerobotics/unitree_sdk2_python).
 
-- Each hand (left or right) is controlled by a USB-to-serial device, and each generates a pair of topics: `rt/brainco/(left or right)/(cmd or state)`.
+- Both hands are controlled via a single combined 12-motor topic: `rt/ee/cmd` and `rt/ee/state` (right hand: motors 0-5, left hand: motors 6-11). The DDS namespace is configurable via `--namespace` (default: `ee`).
 
-- The position and speed of the fingers are normalized to the [0, 1] range.
+- The position and speed of the fingers are normalized to the [0, 1] range. Convention: `1.0 = open`, `0.0 = closed`. The service inverts values internally (hardware uses opposite convention).
 
 - It is recommended to set the speed of all fingers to 1.0.
 
@@ -59,19 +59,22 @@ cd ~/brainco_hand_service/bin
 
 # start server
 sudo ./brainco_hand_server --network eth0
-# Simplified (defaults apply)
+# Simplified (defaults apply, namespace=ee)
 sudo ./brainco_hand_server
+# Custom namespace
+sudo ./brainco_hand_server --namespace ee --network eth0
 
 # at another terminal, run test examples
 # Usage: ./test_brainco_hand_server [left|right]
-# Default is 'left' if not specified.
+# Default is 'right' if not specified. Uses combined ee topic (12 motors).
+# Convention: 1.0 = open, 0.0 = closed.
 # Normally, you should see the dexterous hand repeatedly perform the actions of making a fist and opening.
 
-# test left side
+# test right side (default)
 cd ~/brainco_hand_service/bin
 sudo ./test_brainco_hand_server
-# or test right side
-sudo ./test_brainco_hand_server right
+# or test left side
+sudo ./test_brainco_hand_server left
 ```
 
 # 3. 🚀🚀🚀 Automatic Startup Service
